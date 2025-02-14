@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Scrape Prometheus’s own metrics.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape metrics from the OTEL Collector (exposed on port 55681).
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:55681']
+
+  # Optionally scrape metrics from the ASP.NET API (if it exposes Prometheus metrics on /metrics).
+  - job_name: 'dotnet'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['dotnet:8080']
+
+  # Optionally scrape metrics from the Python Flask API (if it exposes Prometheus metrics on /metrics).
+  - job_name: 'python'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['python:8080']
+
