@@ -12,14 +12,15 @@ services:
       - OTEL_SERVICE_NAME=dotnet-api
 
   # Python/Flask API from ./python running on port 8080
-  # python:
-  #   build:
-  #     context: ./python
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #     - OTEL_SERVICE_NAME=python-api
+  python:
+    container_name: python_api
+    build:
+      context: ./python
+    ports:
+      - "5000:5000"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=python-api
 
   # Minimal JavaScript UI from ./ui (e.g. served via a simple Nginx or Node static server)
   # ui:
