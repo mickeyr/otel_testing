@@ -1,31 +1,33 @@
-from flask import Flask, request
-from opentelemetry._logs import set_logger_provider
-import requests
 import json
 import logging
-from pythonjsonlogger.json import JsonFormatter
 
+import requests
+from flask import Flask, request
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.instrumentation.flask import FlaskInstrumentor
-
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.metrics import (
+    Instrument,
     get_meter_provider,
     set_meter_provider,
 )
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics._internal import instrument
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from pythonjsonlogger.json import JsonFormatter
 
 app = Flask(__name__)
 
-FlaskInstrumentor().instrument(enable_commenter=True, commenter_options={})
+FlaskInstrumentor().instrument_app(app)
 
 trace_provider = TracerProvider()
 trace_processor = BatchSpanProcessor(OTLPSpanExporter(insecure=True))
@@ -60,6 +62,8 @@ meter = get_meter_provider().get_meter(__name__)
 arrivals_counter = meter.create_counter("arrivals_requests")
 planes_viewed_counter = meter.create_counter("planes_viewed")
 
+prop = TraceContextTextMapPropagator()
+
 
 def get_plane_data(flights: list):
     with tracer.start_as_current_span("get_plane_data"):
@@ -79,33 +83,35 @@ base_url = "https://opensky-network.org/api"
 
 @app.route("/arrivals")
 def arrivals():
-    with tracer.start_as_current_span("arrivals"):
-        airport_code = request.args.get("airport")
-        begin = request.args.get("begin")
-        end = request.args.get("end")
-        if not airport_code or not begin or not end:
-            return {"error": "Missing required parameters"}, 400
-        labels = {"airport": airport_code}
-        arrivals_counter.add(1, attributes=labels)
-        logger.info(
-            "Finding arrivals for airport",
-            extra={"airport": airport_code, "begin": str(begin), "end": str(end)},
-        )
-        url = (
-            f"{base_url}/flights/arrival?airport={airport_code}&begin={begin}&end={end}"
-        )
-        logger.info("Calling OpenSky API", extra={"url": url})
+    headers = json.dumps({k: v for k, v in request.headers})
+    logger.info("Request", extra={"request": headers})
+
+    airport_code = request.args.get("airport")
+    begin = request.args.get("begin")
+    end = request.args.get("end")
+
+    if not airport_code or not begin or not end:
+        return {"error": "Missing required parameters"}, 400
+    labels = {"airport": airport_code}
+
+    arrivals_counter.add(1, attributes=labels)
+    logger.info(
+        "Finding arrivals for airport",
+        extra={"airport": airport_code, "begin": str(begin), "end": str(end)},
+    )
+
+    url = f"{base_url}/flights/arrival?airport={airport_code}&begin={begin}&end={end}"
+    logger.info("Calling OpenSky API", extra={"url": url})
+    with tracer.start_span("get_flights"):
         response = requests.get(
             url,
             headers={"Accept": "application/json"},
         )
-        if response.ok:
-            logger.info(
-                "Response from OpenSky API", extra={"status": response.status_code}
-            )
-            flights = json.loads(response.content)
-            return get_plane_data(flights)
-        return []
+    if response.ok:
+        logger.info("Response from OpenSky API", extra={"status": response.status_code})
+        flights = json.loads(response.content)
+        return get_plane_data(flights)
+    return []
 
 
 if __name__ == "__main__":

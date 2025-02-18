@@ -8,27 +8,25 @@ using Types;
 using dotnet;
 
 var builder = WebApplication.CreateBuilder(args);
-
 var configuration = builder.Configuration;
-
 TelemetryExtensions.UseTelemetry(builder);
 
 var app = builder.Build();
 
 Meter meter = new("AircraftLookup");
-Counter<int> aircraftLookupCounter = meter.CreateCounter<int>("AircraftLookupCounter");
-Histogram<double> aircraftLookupDuration = meter.CreateHistogram<double>("AircraftLookupDuration");
-Counter<int> aircraftLookupStatusCodeCounter = meter.CreateCounter<int>("AircraftLookupStatusCodeCounter");
-Counter<int> aircraftLookupErrorCounter = meter.CreateCounter<int>("AircraftLookupErrorCounter");
-Counter<int> aircraftLookupSuccessCounter = meter.CreateCounter<int>("AircraftLookupSuccessCounter");
-Counter<long> aircraftLookupPayloadSizeCounter = meter.CreateCounter<long>("AircraftLookupPayloadSizeCounter");
+var aircraftLookupCounter = meter.CreateCounter<int>("AircraftLookupCounter");
+var aircraftLookupDuration = meter.CreateHistogram<double>("AircraftLookupDuration");
+var aircraftLookupStatusCodeCounter = meter.CreateCounter<int>("AircraftLookupStatusCodeCounter");
+var aircraftLookupErrorCounter = meter.CreateCounter<int>("AircraftLookupErrorCounter");
+var aircraftLookupSuccessCounter = meter.CreateCounter<int>("AircraftLookupSuccessCounter");
+var aircraftLookupPayloadSizeCounter = meter.CreateCounter<long>("AircraftLookupPayloadSizeCounter");
 
-Counter<int> airportLookupCounter = meter.CreateCounter<int>("AirportLookupCounter");
-Histogram<double> airportLookupDuration = meter.CreateHistogram<double>("AirportLookupDuration");
-Counter<int> airportLookupStatusCodeCounter = meter.CreateCounter<int>("AirportLookupStatusCodeCounter");
-Counter<int> airportLookupErrorCounter = meter.CreateCounter<int>("AirportLookupErrorCounter");
-Counter<int> airportLookupSuccessCounter = meter.CreateCounter<int>("AirportLookupSuccessCounter");
-Counter<long> airportLookupPayloadSizeCounter = meter.CreateCounter<long>("AirportLookupPayloadSizeCounter");
+var airportLookupCounter = meter.CreateCounter<int>("AirportLookupCounter");
+var airportLookupDuration = meter.CreateHistogram<double>("AirportLookupDuration");
+var airportLookupStatusCodeCounter = meter.CreateCounter<int>("AirportLookupStatusCodeCounter");
+var airportLookupErrorCounter = meter.CreateCounter<int>("AirportLookupErrorCounter");
+var airportLookupSuccessCounter = meter.CreateCounter<int>("AirportLookupSuccessCounter");
+var airportLookupPayloadSizeCounter = meter.CreateCounter<long>("AirportLookupPayloadSizeCounter");
 
 ActivitySource activitySource = new("AircraftLookup");
 
@@ -61,17 +59,16 @@ async Task<Aircraft> GetAircraft(string registration, ILogger<Program> logger)
   aircraftLookupPayloadSizeCounter.Add(response.Content.Headers.ContentLength ?? 0, new KeyValuePair<string, object?>("registration", registration));
 
   var payload = await response.Content.ReadFromJsonAsync<AircraftResponsePayload>();
-  if (payload?.Response?.Aircraft == null)
-  {
-    logger.LogError("Failed to get aircraft info");
-    throw new Exception("Failed to get aircraft info");
-  }
+  
+  if (payload?.Response?.Aircraft != null) return payload.Response.Aircraft;
+  
+  logger.LogError("Failed to get aircraft info");
+  throw new Exception("Failed to get aircraft info");
 
 
-  return payload.Response.Aircraft;
 }
 
-async Task<List<string>> GetRegistrationCodesForAiport(string airportCode, DateTimeOffset begin, DateTimeOffset end, ILogger<Program> logger)
+async Task<List<string>> GetRegistrationCodesForAirport(string airportCode, DateTimeOffset begin, DateTimeOffset end, ILogger<Program> logger)
 {
   using var activity = activitySource.StartActivity("GetRegistrationCodesForAiport");
   logger.LogInformation("Getting registrations for airport {AirportCode}", airportCode);
@@ -112,7 +109,7 @@ async Task<List<Aircraft>> HandleGetPlaneInfo([FromServices] ILogger<Program> lo
   using var activity = activitySource.StartActivity("HandleGetPlaneInfo");
   logger.LogInformation("Getting plane info for airport {AirportCode}", airportCode);
 
-  var registrations = await GetRegistrationCodesForAiport(airportCode, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, logger);
+  var registrations = await GetRegistrationCodesForAirport(airportCode, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, logger);
   var planes = new List<Aircraft>();
   foreach (var registration in registrations)
   {
