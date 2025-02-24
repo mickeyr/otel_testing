@@ -93,6 +93,7 @@ services:
       - loki
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
 
 volumes:
   prometheus_data:

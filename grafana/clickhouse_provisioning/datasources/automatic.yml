@@ -1,0 +1,36 @@
+apiVersion: 1
+
+datasources:
+- id: 1
+  uid: fee21xt5f1h4wb
+  orgId: 1
+  name: grafana-clickhouse-datasource
+  type: grafana-clickhouse-datasource
+  typeName: ClickHouse
+  typeLogoUrl: public/plugins/grafana-clickhouse-datasource/img/logo.svg
+  access: proxy
+  url: ''
+  user: ''
+  database: ''
+  basicAuth: false
+  isDefault: true
+  jsonData:
+    host: clickhouse
+    logs:
+      contextColumns: []
+      defaultTable: otel_logs
+      otelEnabled: true
+      otelVersion: latest
+      selectContextColumns: true
+    port: 9000
+    protocol: native
+    traces:
+      defaultTable: otel_traces
+      durationUnit: nanoseconds
+      otelEnabled: true
+      otelVersion: latest
+    username: admin
+    version: 4.8.1
+  secureJsonData:
+    password: admin
+  readOnly: false
