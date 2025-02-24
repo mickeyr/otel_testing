@@ -1,0 +1,67 @@
+apiVersion: 1
+
+datasources:
+- id: 2
+  uid: eedg3trn9s2dcf
+  orgId: 1
+  name: loki
+  type: loki
+  typeName: Loki
+  typeLogoUrl: public/app/plugins/datasource/loki/img/loki_icon.svg
+  access: proxy
+  url: http://loki:3100
+  user: ''
+  database: ''
+  basicAuth: false
+  isDefault: false
+  jsonData:
+    derivedFields:
+    - datasourceUid: fedg3uzchtudcb
+      matcherRegex: \"traceid\":\s*\"(.+?)\"
+      matcherType: regex
+      name: traceid
+      url: "${__value.raw}"
+      urlDisplayLabel: View Trace
+    tlsSkipVerify: true
+  readOnly: false
+- id: 1
+  uid: dedg3qp4314hsf
+  orgId: 1
+  name: prometheus
+  type: prometheus
+  typeName: Prometheus
+  typeLogoUrl: public/app/plugins/datasource/prometheus/img/prometheus_logo.svg
+  access: proxy
+  url: http://prometheus:9090
+  user: ''
+  database: ''
+  basicAuth: false
+  isDefault: true
+  jsonData:
+    exemplarTraceIdDestinations:
+    - datasourceUid: fedg3uzchtudcb
+      name: traceID
+    httpMethod: POST
+    tlsSkipVerify: true
+  readOnly: false
+- id: 3
+  uid: fedg3uzchtudcb
+  orgId: 1
+  name: tempo
+  type: tempo
+  typeName: Tempo
+  typeLogoUrl: public/app/plugins/datasource/tempo/img/tempo_logo.svg
+  access: proxy
+  url: http://tempo:3200
+  user: ''
+  database: ''
+  basicAuth: false
+  isDefault: false
+  jsonData:
+    tlsSkipVerify: true
+    tracesToLogsV2:
+      customQuery: false
+      datasourceUid: eedg3trn9s2dcf
+    tracesToMetrics:
+      datasourceUid: dedg3qp4314hsf
+  readOnly: false

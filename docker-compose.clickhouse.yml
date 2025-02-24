@@ -1,0 +1,70 @@
+services:
+  # ASP.NET Web API from ./dotnet running on port 5042
+  dotnet:
+    container_name: ch_dotnet_api
+    build:
+      context: ./dotnet
+    ports:
+      - "8080:8080"
+    environment:
+      # Instruct the app to send OTLP telemetry to the collector.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://ch_otel_collector:4317
+      - OTEL_SERVICE_NAME=dotnet-api
+      - ArrivalsUrl=http://python:5000
+
+  # Python/Flask API from ./python running on port 8080
+  python:
+    container_name: ch_python_api
+    build:
+      context: ./python
+    ports:
+      - "5000:5000"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://ch_otel_collector:4317
+      - OTEL_SERVICE_NAME=python-api
+
+  # OpenTelemetry Collector to receive telemetry from the apps and export to backend systems.
+  otel-collector:
+    container_name: ch_otel_collector
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config", "/etc/otel-collector-config.yaml"]
+    restart: unless-stopped
+    volumes:
+      - ./otel/clickhouse-otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      - clickhouse
+
+  clickhouse:
+    container_name: clickhouse
+    image: clickhouse/clickhouse-server
+    volumes:
+      - clickhouse-clickhouse:/var/lib/clickhouse
+      - clickhouse-clickhouse-server:/var/lib/clickhouse-server
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      - CLICKHOUSE_USER=admin
+      - CLICKHOUSE_PASSWORD=admin
+
+  # Grafana for visualizing metrics and logs (access at http://localhost:3000)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ch_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_PLUGINS_PREINSTALL=grafana-clickhouse-datasource
+    depends_on:
+      - clickhouse
+    volumes:
+      - clickhouse-grafana-data:/var/lib/grafana
+      - ./grafana/clickhouse_provisioning:/etc/grafana/provisioning
+
+volumes:
+  clickhouse-grafana-data:
+  clickhouse-clickhouse:
+  clickhouse-clickhouse-server:

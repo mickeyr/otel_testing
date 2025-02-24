@@ -10,6 +10,7 @@ services:
       # Instruct the app to send OTLP telemetry to the collector.
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=dotnet-api
+      - ArrivalsUrl=http://python:5000
 
   # Python/Flask API from ./python running on port 8080
   python:
@@ -55,9 +56,8 @@ services:
     image: memcached:latest
     container_name: memcached
     environment:
-      - MEMCACHED_MAX_MEMORY=64m  # Set the maximum memory usage
-      - MEMCACHED_THREADS=4       # Number of threads to use
-
+      - MEMCACHED_MAX_MEMORY=64m # Set the maximum memory usage
+      - MEMCACHED_THREADS=4 # Number of threads to use
 
   # Prometheus for scraping and storing metrics (access at http://localhost:9090)
   prometheus:
@@ -93,6 +93,7 @@ services:
       - loki
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
 
 volumes:
   prometheus_data:
